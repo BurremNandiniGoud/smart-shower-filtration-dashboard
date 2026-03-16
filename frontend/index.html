@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Smart Shower Filtration Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@2.0.1"></script>
+
+<style>
+
+body{
+font-family:'Segoe UI',sans-serif;
+margin:0;
+background:#eef3f7;
+color:#333;
+}
+
+header{
+background:linear-gradient(90deg,#0077b6,#00b4d8);
+color:white;
+padding:20px;
+text-align:center;
+font-size:26px;
+font-weight:600;
+}
+
+.container{
+padding:20px;
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:20px;
+}
+
+.card{
+background:white;
+padding:20px;
+border-radius:12px;
+box-shadow:0 4px 15px rgba(0,0,0,0.08);
+}
+
+.metric{
+font-size:30px;
+font-weight:bold;
+color:#0077b6;
+}
+
+.title{
+font-size:14px;
+color:#777;
+margin-bottom:5px;
+}
+
+.chart-container{
+grid-column:span 2;
+}
+
+.heatmap{
+grid-column:span 4;
+}
+
+.alert{
+color:#d90429;
+font-weight:bold;
+}
+
+.feedback{
+grid-column:span 2;
+}
+
+select,button{
+padding:8px;
+margin-top:6px;
+border-radius:6px;
+border:1px solid #ccc;
+}
+
+button{
+background:#0077b6;
+color:white;
+cursor:pointer;
+border:none;
+}
+
+button:hover{
+background:#023e8a;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+Smart Shower Filtration System Dashboard
+</header>
+
+<div class="container">
+
+<div class="card">
+<div class="title">TDS Level</div>
+<div id="tds" class="metric">--</div>
+</div>
+
+<div class="card">
+<div class="title">Flow Rate</div>
+<div id="flow" class="metric">--</div>
+</div>
+
+<div class="card">
+<div class="title">Temperature</div>
+<div id="temp" class="metric">--</div>
+</div>
+
+<div class="card">
+<div class="title">Filter Health</div>
+<div id="health" class="metric">--</div>
+</div>
+
+<div class="card chart-container">
+<h3>TDS Trend</h3>
+<canvas id="tdsChart"></canvas>
+</div>
+
+<div class="card chart-container">
+<h3>Flow Rate Trend</h3>
+<canvas id="flowChart"></canvas>
+</div>
+
+<div class="card heatmap">
+<h3>Shower Usage Heatmap</h3>
+<canvas id="heatmapChart"></canvas>
+</div>
+
+<div class="card">
+<h3>Alerts</h3>
+<p class="alert">⚠ Replace filter in 5 days</p>
+</div>
+
+<div class="card feedback">
+
+<h3>User Feedback</h3>
+
+<label>Water Feel</label>
+<br>
+<select>
+<option>1 - Poor</option>
+<option>2</option>
+<option>3</option>
+<option>4</option>
+<option>5 - Excellent</option>
+</select>
+
+<br><br>
+
+<label>Scent Intensity</label>
+<br>
+<select>
+<option>1</option>
+<option>2</option>
+<option>3</option>
+<option>4</option>
+<option>5</option>
+</select>
+
+<br><br>
+
+<button>Submit Feedback</button>
+
+</div>
+
+</div>
+
+<script>
+
+/* ----------------- Charts ---------------- */
+
+const tdsChart = new Chart(
+document.getElementById('tdsChart'),
+{
+type:'line',
+data:{
+labels:[],
+datasets:[{
+label:'TDS ppm',
+data:[],
+borderColor:'#0077b6',
+fill:false,
+tension:0.3
+}]
+}
+})
+
+const flowChart = new Chart(
+document.getElementById('flowChart'),
+{
+type:'line',
+data:{
+labels:[],
+datasets:[{
+label:'Flow GPM',
+data:[],
+borderColor:'#00b4d8',
+fill:false,
+tension:0.3
+}]
+}
+})
+
+/* ----------------- Heatmap ---------------- */
+
+const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+
+let heatmapData=[]
+
+for(let d=0;d<7;d++){
+for(let h=0;h<24;h++){
+
+heatmapData.push({
+x:h,
+y:d,
+v:Math.floor(Math.random()*10)
+})
+
+}
+}
+
+new Chart(document.getElementById('heatmapChart'),{
+
+type:'matrix',
+
+data:{
+datasets:[{
+label:'Usage',
+data:heatmapData,
+backgroundColor(ctx){
+
+const value=ctx.dataset.data[ctx.dataIndex].v
+const alpha=value/10
+
+return `rgba(0,119,182,${alpha})`
+
+},
+
+width(ctx){
+const a=ctx.chart.chartArea||{}
+return (a.right-a.left)/24-1
+},
+
+height(ctx){
+const a=ctx.chart.chartArea||{}
+return (a.bottom-a.top)/7-1
+}
+
+}]
+},
+
+options:{
+plugins:{legend:false},
+scales:{
+x:{
+type:'linear',
+position:'bottom',
+ticks:{callback:v=>v+"h"}
+},
+y:{
+type:'linear',
+ticks:{callback:v=>days[v]}
+}
+}
+}
+
+})
+
+/* ----------------- Load Sensor Data ---------------- */
+
+async function loadSensorData(){
+
+try{
+
+const res = await fetch("/api/sensor-data")
+const data = await res.json()
+
+if(data.length===0) return
+
+const latest=data[data.length-1]
+
+document.getElementById("tds").innerText = latest.tds+" ppm"
+document.getElementById("flow").innerText = latest.flow_rate+" GPM"
+document.getElementById("temp").innerText = latest.temperature+"°C"
+
+let health = Math.max(0,100-latest.tds/5)
+document.getElementById("health").innerText = health.toFixed(0)+"%"
+
+/* update charts */
+
+tdsChart.data.labels.push(" ")
+tdsChart.data.datasets[0].data.push(latest.tds)
+
+flowChart.data.labels.push(" ")
+flowChart.data.datasets[0].data.push(latest.flow_rate)
+
+if(tdsChart.data.labels.length>15){
+
+tdsChart.data.labels.shift()
+tdsChart.data.datasets[0].data.shift()
+
+flowChart.data.labels.shift()
+flowChart.data.datasets[0].data.shift()
+
+}
+
+tdsChart.update()
+flowChart.update()
+
+}catch(err){
+
+console.log(err)
+
+}
+
+}
+
+/* refresh every 3 seconds */
+
+setInterval(loadSensorData,3000)
+
+loadSensorData()
+
+</script>
+
+</body>
+</html>
