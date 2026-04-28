@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 
+//saved into DataBase
+
 const sensorSchema = new mongoose.Schema({
 
  device_id:{
