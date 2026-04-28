@@ -19,6 +19,10 @@ const sensorSchema = new mongoose.Schema({
   type:Number
  },
 
+ value:{
+  type:String
+ },
+
  timestamp:{
   type:Date,
   default:Date.now
