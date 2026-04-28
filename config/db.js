@@ -1,12 +1,15 @@
 const mongoose = require("mongoose");
+require("dotenv").config();
 
 const connectDB = async () => {
- try{
-   await mongoose.connect("mongodb://localhost:27017/shower_filter_system");
-   console.log("MongoDB Connected");
- }catch(err){
-   console.log(err);
- }
+  try {
+    await mongoose.connect(process.env.MONGO_URI)
+
+    console.log("MongoDB Atlas Connected");
+  } catch (error) {
+    console.error(error);
+    process.exit(1);
+  }
 };
 
 module.exports = connectDB;
